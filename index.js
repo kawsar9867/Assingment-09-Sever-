@@ -112,6 +112,47 @@ async function run() {
       }
     });
 
+    // PUT update tutor (Private route)
+    app.put("/tutors/:id", verifyJWT, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updatedTutor = req.body;
+        
+        // Find existing tutor to verify ownership
+        const query = { _id: new ObjectId(id) };
+        const existing = await tutorsCollection.findOne(query);
+        if (!existing) {
+          return res.status(404).send({ error: true, message: "Tutor not found" });
+        }
+        
+        if (req.decoded.email !== existing.email) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+
+        const updateDoc = {
+          $set: {
+            name: updatedTutor.name,
+            image: updatedTutor.image,
+            subject: updatedTutor.subject,
+            availableDays: updatedTutor.availableDays,
+            availableTime: updatedTutor.availableTime,
+            hourlyFee: parseFloat(updatedTutor.hourlyFee) || 0,
+            totalSlots: parseInt(updatedTutor.totalSlots) || 0,
+            sessionStartDate: updatedTutor.sessionStartDate,
+            registrationStartDate: updatedTutor.registrationStartDate,
+            registrationEndDate: updatedTutor.registrationEndDate,
+            institution: updatedTutor.institution,
+            location: updatedTutor.location,
+            mode: updatedTutor.mode,
+          },
+        };
+
+        const result = await tutorsCollection.updateOne(query, updateDoc);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
 
 run().catch(console.dir);
 
