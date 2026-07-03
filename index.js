@@ -66,7 +66,17 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
-  
+   // GET all tutors (with Search by name and Filter by registration dates)
+    app.get("/tutors", async (req, res) => {
+      try {
+        const { search, startDate, endDate } = req.query;
+        let query = {};
+
+        // Case-insensitive regex search for tutor name
+        if (search) {
+          query.name = { $regex: search, $options: "i" };
+        }
+
 
 
 run().catch(console.dir);
