@@ -93,6 +93,25 @@ async function run() {
       }
     });
 
+    // POST add tutor (Private route)
+    app.post("/tutors", verifyJWT, async (req, res) => {
+      try {
+        const newTutor = req.body;
+        // Verify email in token matches email of creator
+        if (req.decoded.email !== newTutor.email) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+        // Force conversion of slot and price to numbers
+        newTutor.totalSlots = parseInt(newTutor.totalSlots) || 0;
+        newTutor.hourlyFee = parseFloat(newTutor.hourlyFee) || 0;
+        
+        const result = await tutorsCollection.insertOne(newTutor);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+
 
 run().catch(console.dir);
 
