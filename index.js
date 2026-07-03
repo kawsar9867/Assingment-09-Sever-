@@ -153,6 +153,29 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
+    
+  // DELETE tutor (Private route)
+    app.delete("/tutors/:id", verifyJWT, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        
+        const existing = await tutorsCollection.findOne(query);
+        if (!existing) {
+          return res.status(404).send({ error: true, message: "Tutor not found" });
+        }
+
+        if (req.decoded.email !== existing.email) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+
+        const result = await tutorsCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+
 
 run().catch(console.dir);
 
