@@ -76,7 +76,22 @@ async function run() {
         if (search) {
           query.name = { $regex: search, $options: "i" };
         }
+ // Date filtering using $gte and $lte (handling comparison as strings or parsed dates)
+        if (startDate && endDate) {
+          query.registrationStartDate = { $gte: startDate };
+          query.registrationEndDate = { $lte: endDate };
+        } else if (startDate) {
+          query.registrationStartDate = { $gte: startDate };
+        } else if (endDate) {
+          query.registrationEndDate = { $lte: endDate };
+        }
 
+        const result = await tutorsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
 
 
 run().catch(console.dir);
