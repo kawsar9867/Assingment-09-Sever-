@@ -57,7 +57,18 @@ async function run() {
     // Public / Protected Tutor Endpoints
 
     // GET 6 tutors for home page (limit operator)
-  }
+   // GET 6 tutors for home page (limit operator)
+    app.get("/tutors/limit", async (req, res) => {
+      try {
+        const result = await tutorsCollection.find().limit(6).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+  
+
+
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
