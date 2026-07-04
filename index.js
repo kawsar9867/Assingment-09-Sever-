@@ -288,6 +288,22 @@ async function run() {
       }
     });
 
+    // Send a ping to confirm a successful connection
+    await db.command({ ping: 1 });
+    console.log("Pinged MongoDB successfully.");
+  } catch (error) {
+    console.error("Database connection error:", error);
+  }
+}
+run().catch(console.dir);
+
+app.get("/", (req, res) => {
+  res.send("TutorSphere Server is running fine!");
+});
+
+app.listen(PORT, () => {
+  console.log(TutorSphere server running on port ${PORT});
+});
 
 
 run().catch(console.dir);
