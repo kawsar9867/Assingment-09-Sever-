@@ -233,6 +233,25 @@ async function run() {
       }
     });
 
+    // GET student's own bookings (Private route)
+    app.get("/bookings", verifyJWT, async (req, res) => {
+      try {
+        const studentEmail = req.query.email;
+        if (!studentEmail) {
+          return res.status(400).send({ error: true, message: "student email query param is required" });
+        }
+        
+        if (req.decoded.email !== studentEmail) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+
+        const query = { studentEmail: studentEmail };
+        const result = await bookingsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
 
 run().catch(console.dir);
 
