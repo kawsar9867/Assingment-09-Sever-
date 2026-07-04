@@ -253,6 +253,43 @@ async function run() {
       }
     });
 
+     // PATCH cancel booking (Private route)
+    app.patch("/bookings/:id", verifyJWT, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const booking = await bookingsCollection.findOne(query);
+
+        if (!booking) {
+          return res.status(404).send({ error: true, message: "Booking not found" });
+        }
+
+        if (req.decoded.email !== booking.studentEmail) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+
+        // Update status to "cancelled"
+        const updateDoc = {
+          $set: { status: "cancelled" },
+        };
+        const result = await bookingsCollection.updateOne(query, updateDoc);
+
+        // Optional/Good Practice: Increment tutor slots back
+        if (booking.status === "booked") {
+          await tutorsCollection.updateOne(
+            { _id: new ObjectId(booking.tutorId) },
+            { $inc: { totalSlots: 1 } }
+          );
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+
+
+
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
