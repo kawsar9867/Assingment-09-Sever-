@@ -11,14 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
-);
+app.use(cors({
+  origin: ["http://localhost:3000", "http://localhost:3001"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+}));
 app.use(express.json());
 
 const uri = process.env.MONGODB_URI;
@@ -44,9 +42,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       if (!user || !user.email) {
-        return res
-          .status(400)
-          .send({ error: true, message: "Email is required" });
+        return res.status(400).send({ error: true, message: "Email is required" });
       }
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: "7d",
@@ -55,9 +51,8 @@ async function run() {
     });
 
     // Public / Protected Tutor Endpoints
-
+    
     // GET 6 tutors for home page (limit operator)
-   // GET 6 tutors for home page (limit operator)
     app.get("/tutors/limit", async (req, res) => {
       try {
         const result = await tutorsCollection.find().limit(6).toArray();
@@ -66,7 +61,8 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
-   // GET all tutors (with Search by name and Filter by registration dates)
+
+    // GET all tutors (with Search by name and Filter by registration dates)
     app.get("/tutors", async (req, res) => {
       try {
         const { search, startDate, endDate } = req.query;
@@ -76,7 +72,8 @@ async function run() {
         if (search) {
           query.name = { $regex: search, $options: "i" };
         }
- // Date filtering using $gte and $lte (handling comparison as strings or parsed dates)
+
+        // Date filtering using $gte and $lte (handling comparison as strings or parsed dates)
         if (startDate && endDate) {
           query.registrationStartDate = { $gte: startDate };
           query.registrationEndDate = { $lte: endDate };
@@ -87,6 +84,40 @@ async function run() {
         }
 
         const result = await tutorsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+
+    // GET my tutors by creator email (Private route)
+    app.get("/my-tutors", verifyJWT, async (req, res) => {
+      try {
+        const email = req.query.email;
+        if (!email) {
+          return res.status(400).send({ error: true, message: "email query param is required" });
+        }
+        // Ensure the logged-in user can only see their own listings
+        if (req.decoded.email !== email) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+        const query = { email: email };
+        const result = await tutorsCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
+
+    // GET single tutor by ID
+    app.get("/tutors/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await tutorsCollection.findOne(query);
+        if (!result) {
+          return res.status(404).send({ error: true, message: "Tutor not found" });
+        }
         res.send(result);
       } catch (error) {
         res.status(500).send({ error: true, message: error.message });
@@ -153,8 +184,8 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
-    
-  // DELETE tutor (Private route)
+
+    // DELETE tutor (Private route)
     app.delete("/tutors/:id", verifyJWT, async (req, res) => {
       try {
         const id = req.params.id;
@@ -175,6 +206,10 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
+
+
+    // BOOKINGS API
+
     // POST create booking (Private route)
     app.post("/bookings", verifyJWT, async (req, res) => {
       try {
@@ -253,7 +288,7 @@ async function run() {
       }
     });
 
-     // PATCH cancel booking (Private route)
+    // PATCH cancel booking (Private route)
     app.patch("/bookings/:id", verifyJWT, async (req, res) => {
       try {
         const id = req.params.id;
@@ -295,17 +330,6 @@ async function run() {
     console.error("Database connection error:", error);
   }
 }
-run().catch(console.dir);
-
-app.get("/", (req, res) => {
-  res.send("TutorSphere Server is running fine!");
-});
-
-app.listen(PORT, () => {
-  console.log(TutorSphere server running on port ${PORT});
-});
-
-
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
