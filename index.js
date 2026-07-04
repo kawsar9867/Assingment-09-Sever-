@@ -175,6 +175,63 @@ async function run() {
         res.status(500).send({ error: true, message: error.message });
       }
     });
+    // POST create booking (Private route)
+    app.post("/bookings", verifyJWT, async (req, res) => {
+      try {
+        const booking = req.body;
+        // Verify student email matches the token email
+        if (req.decoded.email !== booking.studentEmail) {
+          return res.status(403).send({ error: true, message: "forbidden access" });
+        }
+
+        const tutorId = booking.tutorId;
+        const tutorQuery = { _id: new ObjectId(tutorId) };
+        const tutor = await tutorsCollection.findOne(tutorQuery);
+        
+        if (!tutor) {
+          return res.status(404).send({ error: true, message: "Tutor session not found" });
+        }
+
+        // Requirement: If totalSlot = 0 -> booking is blocked
+        if (tutor.totalSlots <= 0) {
+          return res.status(400).send({ error: true, message: "No available slots left." });
+        }
+
+        // Requirement: Session Date Restriction.
+        // "Each tutor has a Session Date. If current date is earlier than session date, booking is not allowed"
+        const currentDate = new Date();
+        const sessionDate = new Date(tutor.sessionStartDate);
+        
+        // Zero out times for date-only comparison if desired, but standard comparison is simple:
+        if (currentDate < sessionDate) {
+          return res.status(400).send({ 
+            error: true, 
+            message: "Booking is not available yet for this tutor" 
+          });
+        }
+
+        // Requirement: Auto Decrease Slot (After Successful Booking)
+        // atomically decrease totalSlots by 1 if it is > 0
+        const updateResult = await tutorsCollection.updateOne(
+          { _id: new ObjectId(tutorId), totalSlots: { $gt: 0 } },
+          { $inc: { totalSlots: -1 } }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+          return res.status(400).send({ 
+            error: true, 
+            message: "This session is fully booked. You can't join at the moment." 
+          });
+        }
+
+        // Store the booking
+        booking.status = "booked"; // auto-generate Book Status
+        const result = await bookingsCollection.insertOne(booking);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ error: true, message: error.message });
+      }
+    });
 
 
 run().catch(console.dir);
